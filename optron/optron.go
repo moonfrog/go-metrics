@@ -13,6 +13,7 @@ import (
 )
 
 type Optron struct {
+	name     string
 	config   *ConfigOptronDef
 	conn     *net.TCPConn
 	interval time.Duration
@@ -36,8 +37,6 @@ func (this *Optron) Start() {
 }
 
 func (this *Optron) connect() {
-	this.working = true
-	return
 	this.working = false
 	conn, err := net.Dial("tcp", this.config.Address)
 	if err != nil {
@@ -58,7 +57,7 @@ func (this *Optron) send() {
 
 	optronObj := map[string]interface{}{
 		"hostName": utils.GetIpAddress(),
-		"id":       "router"}
+		"id":       this.name}
 
 	metrics.DefaultRegistry.Each(func(name string, m interface{}) {
 		switch metric := m.(type) {
@@ -98,8 +97,6 @@ func (this *Optron) send() {
 	}
 
 	dataToPost = append(dataToPost, []byte("\r\n")...)
-	logs.Info("%#v", string(dataToPost))
-	return
 	_, err = this.conn.Write(dataToPost)
 	if err != nil {
 		logs.Warn("optron: send: %v", err)
@@ -107,8 +104,9 @@ func (this *Optron) send() {
 	}
 }
 
-func New(configUri string, interval time.Duration) (*Optron, error) {
+func New(name, configUri string, interval time.Duration) (*Optron, error) {
 	o := &Optron{
+		name:     name,
 		interval: interval,
 	}
 	return o, o.init(configUri)
