@@ -21,7 +21,8 @@ type Timer interface {
 	StdDev() float64
 	Sum() int64
 	Time(func())
-	Update(time.Duration)
+	Update(int64)
+	UpdateTime(time.Duration)
 	UpdateSince(time.Time)
 	Variance() float64
 }
@@ -63,7 +64,7 @@ func NewTimer() Timer {
 		return NilTimer{}
 	}
 	return &StandardTimer{
-		histogram: NewHistogram(NewExpDecaySample(1028, 0.015)),
+		histogram: NewHistogram(NewExpDecaySample(TimerWindow, 0.015)),
 		meter:     NewMeter(),
 	}
 }
@@ -118,8 +119,11 @@ func (NilTimer) Sum() int64 { return 0 }
 // Time is a no-op.
 func (NilTimer) Time(func()) {}
 
+// UpdateTime is a no-op.
+func (NilTimer) UpdateTime(time.Duration) {}
+
 // Update is a no-op.
-func (NilTimer) Update(time.Duration) {}
+func (NilTimer) Update(int64) {}
 
 // UpdateSince is a no-op.
 func (NilTimer) UpdateSince(time.Time) {}
@@ -210,14 +214,18 @@ func (t *StandardTimer) Sum() int64 {
 func (t *StandardTimer) Time(f func()) {
 	ts := time.Now()
 	f()
-	t.Update(time.Since(ts))
+	t.UpdateTime(time.Since(ts))
 }
 
 // Record the duration of an event.
-func (t *StandardTimer) Update(d time.Duration) {
+func (t *StandardTimer) UpdateTime(d time.Duration) {
+	t.Update(int64(d))
+}
+
+func (t *StandardTimer) Update(val int64) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
-	t.histogram.Update(int64(d))
+	t.histogram.Update(val)
 	t.meter.Mark(1)
 }
 
@@ -296,8 +304,12 @@ func (*TimerSnapshot) Time(func()) {
 	panic("Time called on a TimerSnapshot")
 }
 
-// Update panics.
-func (*TimerSnapshot) Update(time.Duration) {
+// UpdateTime panics.
+func (*TimerSnapshot) UpdateTime(time.Duration) {
+	panic("UpdateTime called on a TimerSnapshot")
+}
+
+func (*TimerSnapshot) Update(val int64) {
 	panic("Update called on a TimerSnapshot")
 }
 

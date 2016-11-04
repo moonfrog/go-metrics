@@ -8,6 +8,7 @@ type Counter interface {
 	Count() int64
 	Dec(int64)
 	Inc(int64)
+	Update(int64) // same as Inc
 	Snapshot() Counter
 }
 
@@ -59,6 +60,11 @@ func (CounterSnapshot) Inc(int64) {
 	panic("Inc called on a CounterSnapshot")
 }
 
+// Update panics.
+func (CounterSnapshot) Update(int64) {
+	panic("Update called on a CounterSnapshot")
+}
+
 // Snapshot returns the snapshot.
 func (c CounterSnapshot) Snapshot() Counter { return c }
 
@@ -76,6 +82,8 @@ func (NilCounter) Dec(i int64) {}
 
 // Inc is a no-op.
 func (NilCounter) Inc(i int64) {}
+
+func (NilCounter) Update(i int64) {}
 
 // Snapshot is a no-op.
 func (NilCounter) Snapshot() Counter { return NilCounter{} }
@@ -104,6 +112,10 @@ func (c *StandardCounter) Dec(i int64) {
 // Inc increments the counter by the given amount.
 func (c *StandardCounter) Inc(i int64) {
 	atomic.AddInt64(&c.count, i)
+}
+
+func (c *StandardCounter) Update(i int64) {
+	c.Inc(i)
 }
 
 // Snapshot returns a read-only copy of the counter.

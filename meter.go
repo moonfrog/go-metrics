@@ -10,6 +10,7 @@ import (
 type Meter interface {
 	Count() int64
 	Mark(int64)
+	Update(int64) // same as mark
 	Rate1() float64
 	Rate5() float64
 	Rate15() float64
@@ -67,6 +68,11 @@ func (*MeterSnapshot) Mark(n int64) {
 	panic("Mark called on a MeterSnapshot")
 }
 
+// Update panics.
+func (*MeterSnapshot) Update(n int64) {
+	panic("Update called on a MeterSnapshot")
+}
+
 // Rate1 returns the one-minute moving average rate of events per second at the
 // time the snapshot was taken.
 func (m *MeterSnapshot) Rate1() float64 { return m.rate1 }
@@ -94,6 +100,9 @@ func (NilMeter) Count() int64 { return 0 }
 
 // Mark is a no-op.
 func (NilMeter) Mark(n int64) {}
+
+// Update is a no-op.
+func (NilMeter) Update(n int64) {}
 
 // Rate1 is a no-op.
 func (NilMeter) Rate1() float64 { return 0.0 }
@@ -145,6 +154,11 @@ func (m *StandardMeter) Mark(n int64) {
 	m.a5.Update(n)
 	m.a15.Update(n)
 	m.updateSnapshot()
+}
+
+// Update records the occurance of n events.
+func (m *StandardMeter) Update(n int64) {
+	m.Mark(n)
 }
 
 // Rate1 returns the one-minute moving average rate of events per second.

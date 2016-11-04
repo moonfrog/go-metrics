@@ -45,18 +45,21 @@ type Registry interface {
 
 	// Unregister all metrics.  (Mostly for testing.)
 	UnregisterAll()
+
+	// updates the metric name with val, doesn't work for gaugeFloat64
+	Update(name string, val int64)
 }
 
 // The standard implementation of a Registry is a mutex-protected map
 // of names to metrics.
 type StandardRegistry struct {
-	metrics map[string]interface{}
-	mutex   sync.Mutex
+	metrics map[string]Metric
+	mutex   sync.RWMutex
 }
 
 // Create a new registry.
 func NewRegistry() Registry {
-	return &StandardRegistry{metrics: make(map[string]interface{})}
+	return &StandardRegistry{metrics: make(map[string]Metric)}
 }
 
 // Call the given function for each registered metric.
@@ -68,8 +71,8 @@ func (r *StandardRegistry) Each(f func(string, interface{})) {
 
 // Get the metric by the given name or nil if none is registered.
 func (r *StandardRegistry) Get(name string) interface{} {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	return r.metrics[name]
 }
 
@@ -88,6 +91,18 @@ func (r *StandardRegistry) GetOrRegister(name string, i interface{}) interface{}
 	}
 	r.register(name, i)
 	return i
+}
+
+// creates a counter if metric doesn't exist
+func (r *StandardRegistry) Update(name string, val int64) {
+	r.mutex.RLock()
+	m := r.metrics[name]
+	r.mutex.RUnlock()
+	if m == nil {
+		m = NewRegisteredCounter(name, r)
+	}
+
+	m.Update(val)
 }
 
 // Register the given metric under the given name.  Returns a DuplicateMetric
@@ -125,21 +140,26 @@ func (r *StandardRegistry) UnregisterAll() {
 	}
 }
 
+// assumes lock is taken
 func (r *StandardRegistry) register(name string, i interface{}) error {
 	if _, ok := r.metrics[name]; ok {
 		return DuplicateMetric(name)
 	}
 	switch i.(type) {
-	case Counter, Gauge, GaugeFloat64, Healthcheck, Histogram, Meter, Timer:
-		r.metrics[name] = i
+	// TODO: add gaugefloat
+	case Counter, Gauge, Healthcheck, Histogram, Meter, Timer:
+		r.metrics[name] = i.(Metric)
+	case GaugeFloat64:
+		// TODO: fix
+		r.metrics[name] = NewGauge()
 	}
 	return nil
 }
 
-func (r *StandardRegistry) registered() map[string]interface{} {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	metrics := make(map[string]interface{}, len(r.metrics))
+func (r *StandardRegistry) registered() map[string]Metric {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	metrics := make(map[string]Metric, len(r.metrics))
 	for name, i := range r.metrics {
 		metrics[name] = i
 	}
@@ -167,9 +187,9 @@ func NewPrefixedChildRegistry(parent Registry, prefix string) Registry {
 
 // Call the given function for each registered metric.
 func (r *PrefixedRegistry) Each(fn func(string, interface{})) {
-	wrappedFn := func (prefix string) func(string, interface{}) {
+	wrappedFn := func(prefix string) func(string, interface{}) {
 		return func(name string, iface interface{}) {
-			if strings.HasPrefix(name,prefix) {
+			if strings.HasPrefix(name, prefix) {
 				fn(name, iface)
 			} else {
 				return
@@ -181,10 +201,14 @@ func (r *PrefixedRegistry) Each(fn func(string, interface{})) {
 	baseRegistry.Each(wrappedFn(prefix))
 }
 
+func (r *PrefixedRegistry) Update(name string, val int64) {
+	r.underlying.Update(name, val)
+}
+
 func findPrefix(registry Registry, prefix string) (Registry, string) {
 	switch r := registry.(type) {
 	case *PrefixedRegistry:
-		return findPrefix(r.underlying, r.prefix + prefix)
+		return findPrefix(r.underlying, r.prefix+prefix)
 	case *StandardRegistry:
 		return r, prefix
 	}
@@ -267,4 +291,8 @@ func RunHealthchecks() {
 // Unregister the metric with the given name.
 func Unregister(name string) {
 	DefaultRegistry.Unregister(name)
+}
+
+func Update(name string, val int64) {
+	DefaultRegistry.Update(name, val)
 }
