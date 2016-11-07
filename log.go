@@ -1,8 +1,6 @@
 package metrics
 
 import (
-	"fmt"
-
 	"github.com/moonfrog/badger/logs"
 
 	"time"
@@ -18,35 +16,7 @@ func LogPeriodic(interval time.Duration) {
 
 func LogPeriodicRegistry(r Registry, interval time.Duration) {
 	for _ = range time.Tick(interval) {
-		r.Each(func(name string, m interface{}) {
-			val := ""
-			switch metric := m.(type) {
-			case Counter:
-				val = fmt.Sprintf("%d", metric.Count())
-			case Gauge:
-				val = fmt.Sprintf("%d", metric.Value())
-			case GaugeFloat64:
-				val = fmt.Sprintf("%f", metric.Value())
-			case Healthcheck:
-				metric.Check()
-				val = fmt.Sprintf("%v", metric.Error())
-			case Histogram:
-				h := metric.Snapshot()
-				ps := h.Percentiles([]float64{0.5, 0.80, 0.95, 0.99, 0.999})
-				val = fmt.Sprintf("count: %d, min: %d, max: %d, mean: %f, stddev: %f, median: %f, 80%%: %f, 95%%: %f, 99%%: %f, 99.9%%: %f",
-					h.Count(), h.Min(), h.Max(), h.Mean(), h.StdDev(), ps[0], ps[1], ps[2], ps[3], ps[4])
-			case Meter:
-				m := metric.Snapshot()
-				val = fmt.Sprintf("count: %d, 1MR: %f, 5MR: %f, 15MR: %f, mean: %f", m.Count(), m.Rate1(), m.Rate5(), m.Rate15(), m.RateMean())
-			case Timer:
-				scale := float64(time.Second)
-				t := metric.Snapshot()
-				ps := t.Percentiles([]float64{0.5, 0.80, 0.95, 0.99, 0.999})
-				val = fmt.Sprintf("count: %d, min: %f, max: %f, mean: %f, stddev: %f, median: %f, 80%%: %f, 95%%: %f, 99%%: %f, 99.9%%: %f 1MR: %f, 5MR: %f, 15MR: %f, meanRate: %f", t.Count(), float64(t.Min())/scale, float64(t.Max())/scale, t.Mean()/scale, t.StdDev()/scale, ps[0]/scale, ps[1]/scale, ps[2]/scale, ps[3]/scale, ps[4]/scale, t.Rate1(), t.Rate5(), t.Rate15(), t.RateMean())
-			}
-
-			logs.Info("Metrics: %s: %v", name, val)
-		})
+		logs.Info("%s", GetCurrent())
 	}
 }
 
