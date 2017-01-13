@@ -17,3 +17,10 @@ var UseNilMetrics bool = false
 var TimerWindow int = 100000
 
 var MeterRescaleThreshold time.Duration = 5 * time.Minute
+
+// names for general metrics
+const (
+	RSTAT_ERROR = "error"
+	RSTAT_WARN  = "warn"
+	RSTAT_PANIC = "panic"
+)
