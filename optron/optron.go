@@ -6,12 +6,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/moonfrog/go-logs/logs"
-
 	"github.com/moonfrog/go-metrics"
 
 	"github.com/moonfrog/badger/utils"
 )
+
+type Logger interface {
+	Printf(format string, v ...interface{})
+}
 
 type Optron struct {
 	name     string
@@ -19,6 +21,7 @@ type Optron struct {
 	conn     *net.TCPConn
 	interval time.Duration
 	working  bool
+	l        Logger
 }
 
 func (this *Optron) init(configUri string) error {
@@ -41,7 +44,7 @@ func (this *Optron) connect() {
 	this.working = false
 	conn, err := net.Dial("tcp", this.config.Address)
 	if err != nil {
-		logs.Warnf("optron: connect: %v", err)
+		this.l.Printf("Warn: optron: connect: %v", err)
 	} else {
 		this.conn = conn.(*net.TCPConn)
 		this.working = true
@@ -83,32 +86,33 @@ func (this *Optron) send() {
 		case metrics.Timer:
 			scale := float64(time.Second)
 			t := metric.Snapshot()
-			ps := t.Percentiles([]float64{0.5, 0.80, 0.95, 0.99, 0.999})
+			ps := t.Percentiles([]float64{0.5, 0.80, 0.90, 0.99, 0.999})
 			optronObj[name+"_avg"] = t.Mean() / scale
 			optronObj[name+"_80"] = ps[1]
-			optronObj[name+"_95"] = ps[1]
+			optronObj[name+"_90"] = ps[1]
 			optronObj[name+"_99"] = ps[1]
 			optronObj[name+"_99.9"] = ps[1]
 		}
 	})
 	dataToPost, err := json.Marshal(optronObj)
 	if err != nil {
-		logs.Errorf("optron: marshal: %#v %v", optronObj, err)
+		this.l.Printf("ERROR: optron: marshal: %#v %v", optronObj, err)
 		return
 	}
 
 	dataToPost = append(dataToPost, []byte("\r\n")...)
 	_, err = this.conn.Write(dataToPost)
 	if err != nil {
-		logs.SWarnf("optron: send: %v", err)
+		this.l.Printf("Warn: optron: send: %v", err)
 		this.connect()
 	}
 }
 
-func New(name, configUri string, interval time.Duration) (*Optron, error) {
+func New(name, configUri string, interval time.Duration, l Logger) (*Optron, error) {
 	o := &Optron{
 		name:     name,
 		interval: interval,
+		l:        l,
 	}
 	return o, o.init(configUri)
 }

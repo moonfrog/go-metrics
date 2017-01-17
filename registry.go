@@ -186,8 +186,8 @@ func (r *StandardRegistry) GetCurrent() string {
 			val = fmt.Sprintf("%v", metric.Error())
 		case Histogram:
 			h := metric.Snapshot()
-			ps := h.Percentiles([]float64{0.5, 0.80, 0.95, 0.99, 0.999})
-			val = fmt.Sprintf("count: %d, min: %d, max: %d, mean: %f, stddev: %f, median: %f, 80%%: %f, 95%%: %f, 99%%: %f, 99.9%%: %f",
+			ps := h.Percentiles([]float64{0.5, 0.80, 0.90, 0.99, 0.999})
+			val = fmt.Sprintf("count: %d, min: %d, max: %d, mean: %f, stddev: %f, median: %f, 80%%: %f, 90%%: %f, 99%%: %f, 99.9%%: %f",
 				h.Count(), h.Min(), h.Max(), h.Mean(), h.StdDev(), ps[0], ps[1], ps[2], ps[3], ps[4])
 		case Meter:
 			m := metric.Snapshot()
@@ -195,8 +195,8 @@ func (r *StandardRegistry) GetCurrent() string {
 		case Timer:
 			scale := float64(time.Second)
 			t := metric.Snapshot()
-			ps := t.Percentiles([]float64{0.5, 0.80, 0.95, 0.99, 0.999})
-			val = fmt.Sprintf("count: %d, min: %f, max: %f, mean: %f, stddev: %f, median: %f, 80%%: %f, 95%%: %f, 99%%: %f, 99.9%%: %f 1MR: %f, 5MR: %f, 15MR: %f, meanRate: %f", t.Count(), float64(t.Min())/scale, float64(t.Max())/scale, t.Mean()/scale, t.StdDev()/scale, ps[0]/scale, ps[1]/scale, ps[2]/scale, ps[3]/scale, ps[4]/scale, t.Rate1(), t.Rate5(), t.Rate15(), t.RateMean())
+			ps := t.Percentiles([]float64{0.5, 0.80, 0.90, 0.99, 0.999})
+			val = fmt.Sprintf("count: %d, min: %f, max: %f, mean: %f, stddev: %f, median: %f, 80%%: %f, 90%%: %f, 99%%: %f, 99.9%%: %f 1MR: %f, 5MR: %f, 15MR: %f, meanRate: %f", t.Count(), float64(t.Min())/scale, float64(t.Max())/scale, t.Mean()/scale, t.StdDev()/scale, ps[0]/scale, ps[1]/scale, ps[2]/scale, ps[3]/scale, ps[4]/scale, t.Rate1(), t.Rate5(), t.Rate15(), t.RateMean())
 		}
 
 		result += fmt.Sprintf("Metrics: %s: %v\n", name, val)

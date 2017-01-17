@@ -1,22 +1,18 @@
 package metrics
 
-import (
-	"time"
-
-	"github.com/moonfrog/go-logs/logs"
-)
+import "time"
 
 type Logger interface {
 	Printf(format string, v ...interface{})
 }
 
-func LogPeriodic(interval time.Duration) {
-	LogPeriodicRegistry(DefaultRegistry, interval)
+func LogPeriodic(interval time.Duration, l Logger) {
+	LogPeriodicRegistry(DefaultRegistry, interval, l)
 }
 
-func LogPeriodicRegistry(r Registry, interval time.Duration) {
+func LogPeriodicRegistry(r Registry, interval time.Duration, l Logger) {
 	for _ = range time.Tick(interval) {
-		logs.Infof("%s", GetCurrent())
+		l.Printf("%s", GetCurrent())
 	}
 }
 
