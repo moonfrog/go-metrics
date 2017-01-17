@@ -1,9 +1,9 @@
 package metrics
 
 import (
-	"github.com/moonfrog/badger/logs"
-
 	"time"
+
+	"github.com/moonfrog/go-logs/logs"
 )
 
 type Logger interface {
@@ -16,7 +16,7 @@ func LogPeriodic(interval time.Duration) {
 
 func LogPeriodicRegistry(r Registry, interval time.Duration) {
 	for _ = range time.Tick(interval) {
-		logs.Info("%s", GetCurrent())
+		logs.Infof("%s", GetCurrent())
 	}
 }
 

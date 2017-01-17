@@ -6,9 +6,10 @@ import (
 	"net"
 	"time"
 
+	"github.com/moonfrog/go-logs/logs"
+
 	"github.com/moonfrog/go-metrics"
 
-	"github.com/moonfrog/badger/logs"
 	"github.com/moonfrog/badger/utils"
 )
 
@@ -40,7 +41,7 @@ func (this *Optron) connect() {
 	this.working = false
 	conn, err := net.Dial("tcp", this.config.Address)
 	if err != nil {
-		logs.Warn("optron: connect: %v", err)
+		logs.Warnf("optron: connect: %v", err)
 	} else {
 		this.conn = conn.(*net.TCPConn)
 		this.working = true
@@ -92,14 +93,14 @@ func (this *Optron) send() {
 	})
 	dataToPost, err := json.Marshal(optronObj)
 	if err != nil {
-		logs.Error("optron: marshal: %#v %v", optronObj, err)
+		logs.Errorf("optron: marshal: %#v %v", optronObj, err)
 		return
 	}
 
 	dataToPost = append(dataToPost, []byte("\r\n")...)
 	_, err = this.conn.Write(dataToPost)
 	if err != nil {
-		logs.Warn("optron: send: %v", err)
+		logs.SWarnf("optron: send: %v", err)
 		this.connect()
 	}
 }
