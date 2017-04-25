@@ -17,6 +17,7 @@ type Logger interface {
 
 type Optron struct {
 	name     string
+	game     string
 	config   *ConfigOptronDef
 	conn     *net.TCPConn
 	interval time.Duration
@@ -61,7 +62,8 @@ func (this *Optron) send() {
 
 	optronObj := map[string]interface{}{
 		"hostName": utils.GetIpAddress(),
-		"id":       this.name}
+		"id":       this.name,
+		"game":     this.game}
 
 	metrics.DefaultRegistry.Each(func(name string, m interface{}) {
 		switch metric := m.(type) {
@@ -110,6 +112,16 @@ func (this *Optron) send() {
 
 func New(name, configUri string, interval time.Duration, l Logger) (*Optron, error) {
 	o := &Optron{
+		name:     name,
+		interval: interval,
+		l:        l,
+	}
+	return o, o.init(configUri)
+}
+
+func NewForGame(game, name, configUri string, interval time.Duration, l Logger) (*Optron, error) {
+	o := &Optron{
+		game:     game,
 		name:     name,
 		interval: interval,
 		l:        l,

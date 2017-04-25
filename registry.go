@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -68,8 +69,15 @@ func NewRegistry() Registry {
 
 // Call the given function for each registered metric.
 func (r *StandardRegistry) Each(f func(string, interface{})) {
-	for name, i := range r.registered() {
-		f(name, i)
+	registeredMetrics := r.registered()
+	keys := make([]string, 0, len(registeredMetrics))
+	for name, _ := range registeredMetrics {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		f(name, r.registered()[name])
 	}
 }
 
