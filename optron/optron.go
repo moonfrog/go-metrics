@@ -88,12 +88,12 @@ func (this *Optron) send() {
 		case metrics.Timer:
 			scale := float64(time.Second)
 			t := metric.Snapshot()
-			ps := t.Percentiles([]float64{0.5, 0.80, 0.90, 0.95, 0.999})
+			ps := t.Percentiles([]float64{0.5, 0.80, 0.90, 0.95, 0.99})
 			optronObj[name+"_avg"] = p[0] / scale
 			optronObj[name+"_80"] = ps[1] / scale
 			optronObj[name+"_90"] = ps[2] / scale
-			optronObj[name+"_99"] = ps[3] / scale
-			optronObj[name+"_99.9"] = ps[4] / scale
+			optronObj[name+"_95"] = ps[3] / scale
+			optronObj[name+"_99"] = ps[4] / scale
 		}
 	})
 	dataToPost, err := json.Marshal(optronObj)
