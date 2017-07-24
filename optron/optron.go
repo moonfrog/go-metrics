@@ -6,9 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/moonfrog/go-metrics"
-
 	"github.com/moonfrog/badger/utils"
+	"github.com/moonfrog/go-metrics"
 )
 
 type Logger interface {
@@ -60,12 +59,22 @@ func (this *Optron) send() {
 		}
 	}
 
-	optronObj := map[string]interface{}{
-		"hostName": utils.GetIpAddress(),
-		"id":       this.name,
-		"game":     this.game}
-
+	var optronObjs []map[string]interface{}
 	metrics.DefaultRegistry.Each(func(name string, m interface{}) {
+
+		optronObj := map[string]interface{}{
+			"hostName": utils.GetIpAddress(),
+			"id":       this.name,
+			"game":     this.game}
+
+		if metrics.IsTagged(name) {
+			var tagMap map[string]string
+			name, tagMap = metrics.ParseTaggedMetric(name)
+			for k, v := range tagMap {
+				optronObj[k] = v
+			}
+		}
+
 		switch metric := m.(type) {
 		case metrics.Counter:
 			optronObj[name] = metric.Count()
@@ -95,10 +104,13 @@ func (this *Optron) send() {
 			optronObj[name+"_95"] = ps[3] / scale
 			optronObj[name+"_99"] = ps[4] / scale
 		}
+
+		optronObjs = append(optronObjs, optronObj)
 	})
-	dataToPost, err := json.Marshal(optronObj)
+
+	dataToPost, err := json.Marshal(optronObjs)
 	if err != nil {
-		this.l.Printf("ERROR: optron: marshal: %#v %v", optronObj, err)
+		this.l.Printf("ERROR: optron: marshal: %#v %v", optronObjs, err)
 		return
 	}
 
