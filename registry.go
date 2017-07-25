@@ -183,6 +183,8 @@ func (r *StandardRegistry) GetCurrent() string {
 	r.Each(func(name string, m interface{}) {
 		val := ""
 		switch metric := m.(type) {
+		case Instant:
+			val = fmt.Sprintf("%d", metric.Count())
 		case Counter:
 			val = fmt.Sprintf("%d", metric.Count())
 		case Gauge:
