@@ -76,7 +76,7 @@ func (this *Optron) send() {
 		}
 
 		switch metric := m.(type) {
-		case metrics.InstantCounter:
+		case metrics.Instant:
 			optronObj[name] = metric.Count()
 			metric.Clear()
 		case metrics.Counter:

@@ -29,20 +29,6 @@ func NewCounter() Counter {
 	return &StandardCounter{0}
 }
 
-// GetOrRegisterCounter returns an existing Counter or constructs and registers
-// a new StandardCounter.
-func GetOrRegisterInstantCounter(name string, r Registry) Counter {
-	if nil == r {
-		r = DefaultRegistry
-	}
-	return r.GetOrRegister(name, NewInstantCounter).(Counter)
-}
-
-// NewInstantCounter constructs a new InstantCounter.
-func NewInstantCounter() Counter {
-	return &InstantCounter{0}
-}
-
 // NewRegisteredCounter constructs and registers a new StandardCounter.
 func NewRegisteredCounter(name string, r Registry) Counter {
 	c := NewCounter()
@@ -134,40 +120,5 @@ func (c *StandardCounter) Update(i int64) {
 
 // Snapshot returns a read-only copy of the counter.
 func (c *StandardCounter) Snapshot() Counter {
-	return CounterSnapshot(c.Count())
-}
-
-// InstantCounter is the standard implementation of a Counter and uses the
-// sync/atomic package to manage a single int64 value.
-type InstantCounter struct {
-	count int64
-}
-
-// Clear sets the counter to zero.
-func (c *InstantCounter) Clear() {
-	atomic.StoreInt64(&c.count, 0)
-}
-
-// Count returns the current count.
-func (c *InstantCounter) Count() int64 {
-	return atomic.LoadInt64(&c.count)
-}
-
-// Dec decrements the counter by the given amount.
-func (c *InstantCounter) Dec(i int64) {
-	atomic.AddInt64(&c.count, -i)
-}
-
-// Inc increments the counter by the given amount.
-func (c *InstantCounter) Inc(i int64) {
-	atomic.AddInt64(&c.count, i)
-}
-
-func (c *InstantCounter) Update(i int64) {
-	c.Inc(i)
-}
-
-// Snapshot returns a read-only copy of the counter.
-func (c *InstantCounter) Snapshot() Counter {
 	return CounterSnapshot(c.Count())
 }
