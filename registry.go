@@ -159,7 +159,7 @@ func (r *StandardRegistry) register(name string, i interface{}) error {
 	}
 	switch i.(type) {
 	// TODO: add gaugefloat
-	case Counter, Gauge, Healthcheck, Histogram, Meter, Timer:
+	case Counter, Gauge, Healthcheck, Histogram, Meter, Timer, Instant:
 		r.metrics[name] = i.(Metric)
 	case GaugeFloat64:
 		// TODO: fix

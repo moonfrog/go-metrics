@@ -1,6 +1,8 @@
 package metrics
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 // Counters hold an int64 value that can be incremented and decremented.
 type Instant interface {
@@ -12,7 +14,7 @@ type Instant interface {
 }
 
 // GetOrRegisterCounter returns an existing Instant or constructs and registers
-// a new StandardCounter.
+// a new InstantCounter.
 func GetOrRegisterInstantCounter(name string, r Registry) Instant {
 	if nil == r {
 		r = DefaultRegistry
