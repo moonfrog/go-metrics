@@ -22,6 +22,36 @@ type Optron struct {
 	interval time.Duration
 	working  bool
 	l        Logger
+	builder  *OptronObjBuilder
+}
+
+type OptronObjBuilder struct {
+	hasBulkSupport bool
+	standaloneObj  map[string]interface{}
+	objList        []map[string]interface{}
+}
+
+func (this *OptronObjBuilder) append(data map[string]interface{}) {
+	if this.hasBulkSupport {
+		this.objList = append(this.objList, data)
+	} else {
+		for k, v := range data {
+			this.standaloneObj[k] = v
+		}
+	}
+}
+
+func (this *OptronObjBuilder) flush() interface{} {
+	defer func() {
+		this.standaloneObj = make(map[string]interface{})
+		this.objList = []map[string]interface{}{}
+	}()
+
+	if this.hasBulkSupport {
+		return this.objList
+	} else {
+		return this.standaloneObj
+	}
 }
 
 func (this *Optron) init(configUri string) error {
@@ -31,6 +61,10 @@ func (this *Optron) init(configUri string) error {
 		return fmt.Errorf("optron config: get: %v", err)
 	}
 
+	this.builder = &OptronObjBuilder{
+		hasBulkSupport: this.config.HasBulkSupport,
+		standaloneObj:  make(map[string]interface{}),
+	}
 	return nil
 }
 
@@ -59,7 +93,6 @@ func (this *Optron) send() {
 		}
 	}
 
-	var optronObjs []map[string]interface{}
 	metrics.DefaultRegistry.Each(func(name string, m interface{}) {
 
 		optronObj := map[string]interface{}{
@@ -108,12 +141,13 @@ func (this *Optron) send() {
 			optronObj[name+"_99"] = ps[4] / scale
 		}
 
-		optronObjs = append(optronObjs, optronObj)
+		this.builder.append(optronObj)
 	})
 
-	dataToPost, err := json.Marshal(optronObjs)
+	data := this.builder.flush()
+	dataToPost, err := json.Marshal(data)
 	if err != nil {
-		this.l.Printf("ERROR: optron: marshal: %#v %v", optronObjs, err)
+		this.l.Printf("ERROR: optron: marshal: %#v %v", data, err)
 		return
 	}
 
