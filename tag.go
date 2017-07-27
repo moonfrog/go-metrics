@@ -16,15 +16,38 @@ type TagBoard struct {
 	Act string
 }
 
-func (this TagBoard) String() string {
-	tags := []string{this.Grp, this.Tgt, this.Act}
-	tagStr := this.Ns
+func (tb TagBoard) String() string {
+	tags := []string{tb.Grp, tb.Tgt, tb.Act}
+	tagStr := tb.Ns
 	for _, tag := range tags {
 		if tag != "" {
 			tagStr = tagStr + TAG_DELIMITER + tag
 		}
 	}
 	return tagStr
+}
+
+// Pass the list of tags to be attached to the metric in descending order of hierarchy
+func NewTagBoard(tags ...string) TagBoard {
+	tb := TagBoard{}
+	for i, tag := range tags {
+		if tag == "" {
+			break
+		}
+
+		switch i {
+		case 0:
+			tb.Ns = tag
+		case 1:
+			tb.Grp = tag
+		case 2:
+			tb.Tgt = tag
+		case 3:
+			tb.Act = tag
+		}
+	}
+
+	return tb
 }
 
 func tagMap(tbString string) map[string]string {
