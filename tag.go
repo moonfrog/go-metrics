@@ -14,6 +14,7 @@ type TagBoard struct {
 	Grp string
 	Tgt string
 	Act string
+	Sub string
 }
 
 func (tb TagBoard) String() string {
@@ -44,6 +45,8 @@ func NewTagBoard(tags ...string) TagBoard {
 			tb.Tgt = tag
 		case 3:
 			tb.Act = tag
+		case 4:
+			tb.Sub = tag
 		}
 	}
 
@@ -63,6 +66,8 @@ func tagMap(tbString string) map[string]string {
 			res["tgt"] = tag
 		case 3:
 			res["act"] = tag
+		case 4:
+			res["sub"] = tag
 		}
 	}
 	return res
