@@ -18,7 +18,7 @@ type TagBoard struct {
 }
 
 func (tb TagBoard) String() string {
-	tags := []string{tb.Grp, tb.Tgt, tb.Act}
+	tags := []string{tb.Grp, tb.Tgt, tb.Act, tb.Sub}
 	tagStr := tb.Ns
 	for _, tag := range tags {
 		if tag != "" {
