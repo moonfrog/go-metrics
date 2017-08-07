@@ -6,9 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/moonfrog/go-metrics"
-
 	"github.com/moonfrog/badger/utils"
+	"github.com/moonfrog/go-metrics"
 )
 
 type Logger interface {
@@ -23,6 +22,36 @@ type Optron struct {
 	interval time.Duration
 	working  bool
 	l        Logger
+	builder  *OptronObjBuilder
+}
+
+type OptronObjBuilder struct {
+	hasBulkSupport bool
+	standaloneObj  map[string]interface{}
+	objList        []map[string]interface{}
+}
+
+func (this *OptronObjBuilder) append(data map[string]interface{}) {
+	if this.hasBulkSupport {
+		this.objList = append(this.objList, data)
+	} else {
+		for k, v := range data {
+			this.standaloneObj[k] = v
+		}
+	}
+}
+
+func (this *OptronObjBuilder) flush() interface{} {
+	defer func() {
+		this.standaloneObj = make(map[string]interface{})
+		this.objList = []map[string]interface{}{}
+	}()
+
+	if this.hasBulkSupport {
+		return this.objList
+	} else {
+		return this.standaloneObj
+	}
 }
 
 func (this *Optron) init(configUri string) error {
@@ -32,6 +61,10 @@ func (this *Optron) init(configUri string) error {
 		return fmt.Errorf("optron config: get: %v", err)
 	}
 
+	this.builder = &OptronObjBuilder{
+		hasBulkSupport: this.config.HasBulkSupport,
+		standaloneObj:  make(map[string]interface{}),
+	}
 	return nil
 }
 
@@ -60,13 +93,25 @@ func (this *Optron) send() {
 		}
 	}
 
-	optronObj := map[string]interface{}{
-		"hostName": utils.GetIpAddress(),
-		"id":       this.name,
-		"game":     this.game}
-
 	metrics.DefaultRegistry.Each(func(name string, m interface{}) {
+
+		optronObj := map[string]interface{}{
+			"hostName": utils.GetIpAddress(),
+			"id":       this.name,
+			"game":     this.game}
+
+		if metrics.IsTagged(name) {
+			var tagMap map[string]string
+			name, tagMap = metrics.ParseTaggedMetric(name)
+			for k, v := range tagMap {
+				optronObj[k] = v
+			}
+		}
+
 		switch metric := m.(type) {
+		case metrics.Instant:
+			optronObj[name] = metric.Count()
+			metric.Clear()
 		case metrics.Counter:
 			optronObj[name] = metric.Count()
 		case metrics.Gauge:
@@ -95,10 +140,14 @@ func (this *Optron) send() {
 			optronObj[name+"_95"] = ps[3] / scale
 			optronObj[name+"_99"] = ps[4] / scale
 		}
+
+		this.builder.append(optronObj)
 	})
-	dataToPost, err := json.Marshal(optronObj)
+
+	data := this.builder.flush()
+	dataToPost, err := json.Marshal(data)
 	if err != nil {
-		this.l.Printf("ERROR: optron: marshal: %#v %v", optronObj, err)
+		this.l.Printf("ERROR: optron: marshal: %#v %v", data, err)
 		return
 	}
 

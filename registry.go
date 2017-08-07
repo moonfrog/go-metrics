@@ -159,7 +159,7 @@ func (r *StandardRegistry) register(name string, i interface{}) error {
 	}
 	switch i.(type) {
 	// TODO: add gaugefloat
-	case Counter, Gauge, Healthcheck, Histogram, Meter, Timer:
+	case Counter, Gauge, Healthcheck, Histogram, Meter, Timer, Instant:
 		r.metrics[name] = i.(Metric)
 	case GaugeFloat64:
 		// TODO: fix
@@ -183,6 +183,8 @@ func (r *StandardRegistry) GetCurrent() string {
 	r.Each(func(name string, m interface{}) {
 		val := ""
 		switch metric := m.(type) {
+		case Instant:
+			val = fmt.Sprintf("%d", metric.Count())
 		case Counter:
 			val = fmt.Sprintf("%d", metric.Count())
 		case Gauge:
