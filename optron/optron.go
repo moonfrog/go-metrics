@@ -76,6 +76,7 @@ func (this *Optron) Start() {
 
 func (this *Optron) connect() {
 	this.working = false
+	this.l.Printf("Connecting to : %v\n", this.config.Address)
 	conn, err := net.Dial("tcp", this.config.Address)
 	if err != nil {
 		this.l.Printf("Warn: optron: connect: %v", err)
