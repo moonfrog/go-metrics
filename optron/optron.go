@@ -27,30 +27,42 @@ type Optron struct {
 
 type OptronObjBuilder struct {
 	hasBulkSupport bool
+	batchSize      int
 	standaloneObj  map[string]interface{}
 	objList        []map[string]interface{}
 }
 
-func (this *OptronObjBuilder) append(data map[string]interface{}) {
-	if this.hasBulkSupport {
-		this.objList = append(this.objList, data)
+func (ob *OptronObjBuilder) append(data map[string]interface{}) {
+	if ob.hasBulkSupport {
+		ob.objList = append(ob.objList, data)
 	} else {
 		for k, v := range data {
-			this.standaloneObj[k] = v
+			ob.standaloneObj[k] = v
 		}
 	}
 }
 
-func (this *OptronObjBuilder) flush() interface{} {
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
+}
+
+func (ob *OptronObjBuilder) flush() []interface{} {
 	defer func() {
-		this.standaloneObj = make(map[string]interface{})
-		this.objList = []map[string]interface{}{}
+		ob.standaloneObj = make(map[string]interface{})
+		ob.objList = []map[string]interface{}{}
 	}()
 
-	if this.hasBulkSupport {
-		return this.objList
+	if ob.hasBulkSupport {
+		var data []interface{}
+		for i := 0; i < len(ob.objList); i += ob.batchSize {
+			data = append(data, ob.objList[i:min(i+ob.batchSize, len(ob.objList))])
+		}
+		return data
 	} else {
-		return this.standaloneObj
+		return []interface{}{ob.standaloneObj}
 	}
 }
 
@@ -59,6 +71,10 @@ func (this *Optron) init(configUri string) error {
 	this.config, err = getOptronConfig(configUri)
 	if err != nil {
 		return fmt.Errorf("optron config: get: %v", err)
+	}
+
+	if this.config.HasBulkSupport && this.config.BatchSize < 1 {
+		return fmt.Errorf("optron config: Invalid batch size: %v", this.config.BatchSize)
 	}
 
 	this.builder = &OptronObjBuilder{
@@ -76,6 +92,7 @@ func (this *Optron) Start() {
 
 func (this *Optron) connect() {
 	this.working = false
+	this.l.Printf("Connecting to : %v\n", this.config.Address)
 	conn, err := net.Dial("tcp", this.config.Address)
 	if err != nil {
 		this.l.Printf("Warn: optron: connect: %v", err)
@@ -144,18 +161,20 @@ func (this *Optron) send() {
 		this.builder.append(optronObj)
 	})
 
-	data := this.builder.flush()
-	dataToPost, err := json.Marshal(data)
-	if err != nil {
-		this.l.Printf("ERROR: optron: marshal: %#v %v", data, err)
-		return
-	}
+	content := this.builder.flush()
+	for _, data := range content {
+		dataToPost, err := json.Marshal(data)
+		if err != nil {
+			this.l.Printf("ERROR: optron: marshal: %#v %v", data, err)
+			return
+		}
 
-	dataToPost = append(dataToPost, []byte("\r\n")...)
-	_, err = this.conn.Write(dataToPost)
-	if err != nil {
-		this.l.Printf("Warn: optron: send: %v", err)
-		this.connect()
+		dataToPost = append(dataToPost, []byte("\r\n")...)
+		_, err = this.conn.Write(dataToPost)
+		if err != nil {
+			this.l.Printf("Warn: optron: send: %v", err)
+			this.connect()
+		}
 	}
 }
 

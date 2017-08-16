@@ -9,6 +9,7 @@ import (
 type ConfigOptronDef struct {
 	Address        string
 	HasBulkSupport bool `json:",string"`
+	BatchSize      int  `json:",string"`
 }
 
 func getOptronConfig(configUri string) (*ConfigOptronDef, error) {
