@@ -79,6 +79,7 @@ func (this *Optron) init(configUri string) error {
 
 	this.builder = &OptronObjBuilder{
 		hasBulkSupport: this.config.HasBulkSupport,
+		batchSize:      this.config.BatchSize,
 		standaloneObj:  make(map[string]interface{}),
 	}
 	return nil
