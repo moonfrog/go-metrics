@@ -3,7 +3,7 @@ package optron
 import (
 	"fmt"
 
-	"github.com/moonfrog/badger/zootils"
+	"github.com/moonfrog/nucleus/zootils"
 )
 
 type ConfigOptronDef struct {

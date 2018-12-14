@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/moonfrog/badger/utils"
+	"github.com/moonfrog/nucleus/utils"
 	"github.com/moonfrog/go-metrics"
 )
 
